@@ -1,0 +1,68 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: local-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+      - ./redis.config:/usr/local/etc/redis/redis.conf  # Note: your screenshot says .config not .conf
+    command: redis-server /usr/local/etc/redis/redis.conf
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  queue-server:
+    build:
+      context: .
+      dockerfile: dev.dockerfile  # <--- Added this
+    container_name: local-queue-server
+    ports:
+      - "50051:50051"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - GRPC_PORT=50051
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: python grpc_queue_server.py # Adjusted path based on your screenshot
+    restart: unless-stopped
+
+  file-server:
+    build:
+      context: .
+      dockerfile: dev.dockerfile  # <--- Added this
+    container_name: local-file-server
+    ports:
+      - "50052:50052"
+    environment:
+      - OUTPUT_FILE=/app/output/links.txt
+      - GRPC_PORT=50052
+    volumes:
+      - ./output:/app/output
+    command: python grpc_file_server.py # Adjusted path based on your screenshot
+    restart: unless-stopped
+
+  crawler:
+    build:
+      context: .
+      dockerfile: dev.dockerfile  # <--- Added this
+    container_name: local-crawler
+    environment:
+      - QUEUE_SERVER=queue-server:50051
+      - FILE_SERVER=file-server:50052
+      - CRAWLER_ID=crawler-mac
+      - MAX_URLS=200
+      - SEED_URLS=true
+    depends_on:
+      - queue-server
+      - file-server
+    command: python crawler.py # Adjusted path based on your screenshot
+    restart: unless-stopped
+
+volumes:
+  redis_data:
