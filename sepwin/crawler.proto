@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package crawler;
+
+service QueueService {
+    rpc GetNextURL(GetNextURLRequest) returns (GetNextURLResponse);
+    rpc AddURLs(AddURLsRequest) returns (AddURLsResponse);
+    rpc MarkVisited(MarkVisitedRequest) returns (MarkVisitedResponse);
+    rpc IsVisited(IsVisitedRequest) returns (IsVisitedResponse);
+    rpc SeedURLs(SeedURLsRequest) returns (SeedURLsResponse);
+    rpc GetStats(GetStatsRequest) returns (GetStatsResponse);
+}
+
+service FileService {
+    rpc StoreLink(StoreLinkRequest) returns (StoreLinkResponse);
+    rpc StoreLinks(StoreLinksRequest) returns (StoreLinksResponse);
+}
+
+message GetNextURLRequest { string crawler_id = 1; }
+message GetNextURLResponse { string url = 1; bool queue_empty = 2; }
+
+message AddURLsRequest { repeated string urls = 1; string crawler_id = 2; }
+message AddURLsResponse { int32 added_count = 1; }
+
+message MarkVisitedRequest { string url = 1; string crawler_id = 2; }
+message MarkVisitedResponse { bool success = 1; }
+
+message IsVisitedRequest { string url = 1; }
+message IsVisitedResponse { bool visited = 1; }
+
+message SeedURLsRequest { repeated string urls = 1; }
+message SeedURLsResponse { int32 seeded_count = 1; }
+
+message GetStatsRequest {}
+message GetStatsResponse { int32 queue_size = 1; int32 visited_count = 2; }
+
+message StoreLinkRequest { string url = 1; string crawler_id = 2; int64 timestamp = 3; }
+message StoreLinkResponse { bool success = 1; }
+
+message StoreLinksRequest { repeated StoreLinkRequest links = 1; }
+message StoreLinksResponse { int32 stored_count = 1; }

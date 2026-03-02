@@ -1,0 +1,6 @@
+grpcio==1.78.0
+grpcio-tools==1.78.0
+requests==2.32.5
+beautifulsoup4==4.14.3
+urllib3==2.6.3
+redis>=7.1.1
