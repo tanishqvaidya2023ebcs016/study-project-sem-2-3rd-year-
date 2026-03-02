@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  file-server:
+    build:
+      context: .
+      dockerfile: dev.dockerfile
+    container_name: crawler-file-server
+    ports:
+      - "50052:50052"
+    environment:
+      - OUTPUT_FILE=/app/output/links.txt
+      - GRPC_PORT=50052
+    volumes:
+      - ./output:/app/output
+    command: python file_server.py
+    restart: unless-stopped
+    networks:
+      - crawler-net
+
+  crawler-windows:
+    build:
+      context: .
+      dockerfile: dev.dockerfile
+    container_name: crawler-windows
+    environment:
+      - QUEUE_SERVER=100.109.122.26:50051
+      - FILE_SERVER=file-server:50052
+      - CRAWLER_ID=crawler-windows
+      - MAX_URLS=100
+    depends_on:
+      - file-server
+    command: python crawler.py
+    restart: unless-stopped
+    networks:
+      - crawler-net
+
+networks:
+  crawler-net:
+    driver: bridge
