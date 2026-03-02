@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: crawler-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - crawler-net
+
+  grpc-server:
+    build:
+      context: .
+      dockerfile: dev.dockerfile
+    container_name: crawler-grpc-server
+    ports:
+      - "0.0.0.0:50051:50051"  # Exposed on Tailscale IP too
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - GRPC_PORT=50051
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: python grpc_server.py
+    restart: unless-stopped
+    networks:
+      - crawler-net
+
+  crawler-mac:
+    build:
+      context: .
+      dockerfile: dev.dockerfile
+    container_name: crawler-mac
+    environment:
+      - QUEUE_SERVER=grpc-server:50051
+      - FILE_SERVER=100.110.129.23:50052  # Set this!
+      - CRAWLER_ID=crawler-mac
+      - MAX_URLS=100
+      - SEED_URLS=true
+    depends_on:
+      - grpc-server
+    command: python crawler.py
+    restart: unless-stopped
+    networks:
+      - crawler-net
+
+volumes:
+  redis_data:
+
+networks:
+  crawler-net:
+    driver: bridge
